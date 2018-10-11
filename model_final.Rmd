@@ -1,0 +1,437 @@
+---
+title: "Bank Marketing Data Mining"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+```{r}
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(Hmisc)
+library(ggpubr)
+library(DMwR)
+library(caret)
+```
+
+# 1. Exploratory Data Analysis & Visualization
+```{r}
+## Some inconsistencies in data
+data=read.csv("data/bank-additional-full.csv", header = TRUE, sep = ";")
+df_pdays = data[,c("pdays","previous","poutcome")]
+df_pdays = df_pdays[df_pdays$pdays==999,]
+table(df_pdays$previous)
+table(df_pdays$poutcome)
+```
+
+```{r}
+data=read.csv("data/bank-additional-full.csv", header = TRUE, sep = ";")
+library(ggplot2)
+library(ggpubr)
+for (col in c("job","marital","education","default","housing","loan","contact","month","day_of_week","campaign","previous","poutcome")) {
+    p1 = ggplot(data, aes(data[,col], fill = y)) + geom_bar(position="fill") +
+      labs(x = "Target?", y = col) +
+      theme(axis.text.x=element_text(angle = -90, hjust = 0))
+    p2 = ggplot(data, aes(data[,col], fill = y)) + geom_bar() +
+      labs(x = "Target?", y = col) +
+      theme(axis.text.x=element_text(angle = -90, hjust = 0))
+    p3 = ggarrange(p1, p2, ncol = 2, nrow = 1, common.legend = TRUE)
+    print(p3)
+}
+# Age effect
+data$age_group = cut2(data$age,c(20,30,40,50,60))
+data$age_group = mapvalues(data$age_group, from = levels(data$age_group), to = c("10s", "20s", "30s", "40s", "50s", "60s+"))
+p1 = ggplot(data,aes(x=age_group,fill=y)) + geom_bar(position="fill")
+p2 = ggplot(data,aes(x=age_group,fill=y)) + geom_bar()
+p3 = ggarrange(p1, p2, ncol = 2, nrow = 1, common.legend = TRUE)
+print(p3)
+# pdays
+data[data$pdays == 999,]$pdays = NA 
+data = na.omit(data,pdays)
+p1 = ggplot(data,aes(x=pdays,fill=y)) + geom_bar(position="fill")
+p2 = ggplot(data,aes(x=pdays,fill=y)) + geom_bar()
+p3 = ggarrange(p1, p2, ncol = 2, nrow = 1, common.legend = TRUE)
+print(p3)
+```
+
+```{r}
+# Needs other treatments: age, emp.var.rate, cons.price.idx, cons.conf.idx, euribor3m
+for(colname in c("emp.var.rate", "cons.price.idx", "cons.conf.idx", "euribor3m")) {
+  df_temp = data.frame(table(data[,colname],data$y))
+  colnames(df_temp) =c(colname,"y","freq")
+  df_temp[,colname] = as.numeric(df_temp[,colname])
+  p1 = ggplot(df_temp, aes(x=df_temp[,colname], y=freq,fill=y)) + geom_area() + 
+    labs(x=colname,y="freq")
+  df_temp = data.frame(prop.table(table(data[,colname],data$y),1))
+  colnames(df_temp) =c(colname,"y","freq")
+  df_temp[,colname] = as.numeric(df_temp[,colname])
+  p2 = ggplot(df_temp, aes(x=df_temp[,colname], y=freq,fill=y)) + geom_area() + 
+    labs(x=colname,y="freq%")
+  p3 = ggarrange(p1, p2, ncol = 2, nrow = 1, common.legend = TRUE)
+  print(p3)
+}
+```
+
+```{r}
+# box plot for all numeric input ~ y
+draw_box_plot = function() {
+  for (i in 1:(length(data)-1)) {
+    col = colnames(data)[i];
+    if(!is.numeric(data[,i])) next
+    p1 = ggplot(data, aes(x=y, y=data[,i])) + 
+      geom_boxplot(fill="slateblue", alpha=0.2) + 
+      xlab("Target?") + ylab(col)
+    p2 = ggplot(data, aes(x=data[,col],fill=y)) + geom_histogram() + xlab(col)
+    p3 = ggarrange(p1, p2, ncol = 2, nrow = 1, common.legend = TRUE)
+    print(p3)
+  }
+}
+draw_box_plot()
+```
+
+```{r}
+# Correlation of numberic columns
+library(Hmisc)
+library(corrplot)
+data = select(data,-y,y)
+data_num=data[,sapply(data, is.numeric)]
+data_num=cbind(data_num,y=as.integer(data$y))
+cor_result=rcorr(as.matrix(data_num))
+# Flattern
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+  )
+}
+cor_result_flat = flattenCorrMatrix(cor_result$r, cor_result$P)
+cor_result_flat = cor_result_flat[order(cor_result_flat$cor,decreasing = TRUE),]
+print(cor_result_flat[cor_result_flat$column=="y",])
+library(ggcorrplot)
+ggcorrplot(cor_result$r, hc.order = TRUE, 
+           type = "lower", 
+           lab = TRUE, 
+           lab_size = 3, 
+           method="circle", 
+           colors = c("tomato2", "white", "springgreen3"), 
+           title="Correlogram of data_num", 
+           ggtheme=theme_bw)
+```
+
+# 2. Model Building
+```{r}
+data=read.csv("data/bank-additional-full.csv", header = TRUE, sep = ";")
+
+data = data[,!colnames(data) %in% c("duration") ]
+data$age_group = cut2(data$age,c(20,30,40,50,60))
+data$age_group = mapvalues(data$age_group, from = levels(data$age_group), to = c("teens", "20s", "30s", "40s", "50s", "seniors"))
+data = data[,colnames(data) != "age"]
+data$pdays_cat = factor(ifelse(data$pdays!=999,"contacted_before","not_contacted_before"))
+data = select(data,-pdays)
+data$campaign_cat = factor(ifelse(data$campaign>3 , ">3",data$campaign))
+data = select(data,-campaign)
+data$emp.var.rate.cat = factor(cut2(data$emp.var.rate,c(-1.8,-0.1)))
+data = select(data,-emp.var.rate)
+for(col in c("cons.conf.idx","cons.price.idx","euribor3m","nr.employed")) {
+  newCol = paste(col,".cat",sep="")
+  data[[newCol]]=factor(cut2(data[,col],c(quantile(data[,col], 0.25, na.rm=TRUE)[[1]],
+                                                   mean(data[,col]),
+                                                   quantile(data[,col], 0.75, na.rm=TRUE)[[1]])))
+  data = select(data,-col)
+}
+data = select(data,-y,y)
+
+set.seed(42)
+split = createDataPartition(data$y, times = 1, p=0.25, list = F)
+train = data[split,]
+test = data[-split,]
+train_x = train[,names(train)!="y"]
+train_y = train$y
+folds <- createFolds(train_y, k = 5)
+myControl <- trainControl(
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = TRUE,
+  index = folds,
+  verboseIter = T
+)
+```
+
+
+```{r}
+model_rpart <- train(
+  y ~ ., train,
+  metric = "ROC",
+  method = "rpart",
+  trControl = myControl,
+  tuneGrid = expand.grid(
+    cp = seq(0,0.01,0.001)
+  )
+)
+plot(model_rpart)
+model_rpart$results
+```
+
+```{r}
+model_nb <- train(
+  y ~ ., train,
+  metric = "ROC",
+  method = "naive_bayes",
+  trControl = myControl
+)
+plot(model_nb)
+model_nb$results
+```
+
+```{r}
+model_glmnet <- caret::train(
+  y ~ ., train,
+  metric = "ROC",
+  method = "glmnet",
+  tuneGrid = expand.grid(
+    alpha = c(0,1),
+    lambda = 10:0/50
+  ),
+  trControl = myControl
+)
+plot(model_glmnet)
+model_glmnet$results
+```
+
+```{r}
+model_glmnet_pca <- train(
+  y ~ ., train,
+  metric = "ROC",
+  method = "glmnet",
+  tuneGrid = expand.grid(
+    alpha = c(0),
+    lambda = 10:0/10
+  ),
+  trControl = myControl,
+  preProcess = c("zv", "nzv","center","scale","pca")
+)
+plot(model_glmnet_pca)
+model_glmnet_pca$results
+```
+```{r}
+model_glmnet_mannual_feature_selection <- caret::train(
+  y ~ .-loan-education-marital-housing-age_group-job-emp.var.rate.cat-previous-default, train,
+  metric = "ROC",
+  method = "glmnet",
+  tuneGrid = expand.grid(
+    alpha = c(0,1),
+    lambda = 10:0/50
+  ),
+  trControl = myControl
+)
+plot(model_glmnet_mannual_feature_selection)
+model_glmnet_mannual_feature_selection$results
+```
+
+```{r}
+model_rf <- caret::train(
+  y ~ ., train,
+  metric = "ROC",
+  method = "ranger",
+  importance = 'impurity',
+  trControl = myControl,
+  tuneGrid = expand.grid(
+    mtry = seq(1,10,1),
+    splitrule = c("gini","extratrees"),
+    min.node.size = c(1)
+  )
+)
+plot(model_rf)
+model_rf$results
+```
+
+```{r}
+# Model stacking
+# Two level of modelling; need to use two different datasets for two models in order to avoid overfit
+split_train = createDataPartition(train$y, times = 1, p=0.5, list = F)
+train_level1 = train[split_train,]
+train_level2 = train[-split_train,]
+
+folds_level1 <- createFolds(train_level1$y, k = 5)
+level1_control <- trainControl(
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = "final",
+  index = folds_level1,
+  verboseIter = T
+)
+
+formula_personal = y~job+marital+education+default+housing+contact+month+day_of_week+
+                    previous+poutcome+age_group+pdays_cat+campaign_cat
+formula_macro = y~emp.var.rate.cat+cons.conf.idx.cat+cons.price.idx.cat+euribor3m.cat+nr.employed.cat
+model_personal <- caret::train(
+  formula_personal, train_level1,
+  metric = "ROC",
+  method = "ranger",
+  trControl = level1_control
+)
+model_macro <- caret::train(
+  formula_macro, train_level1,
+  metric = "ROC",
+  method = "glmnet",
+  trControl = level1_control
+)
+resamp = resamples(list(personal=model_personal,macro=model_macro))
+# Show level 1 performance
+summary(resamp,metric="ROC")
+xyplot(resamp)
+```
+```{r}
+train_level2[["personal_pred"]] = predict(model_personal, train_level2, type = "prob")[,2]
+train_level2[["macro_pred"]] = predict(model_macro, train_level2, type = "prob")[,2]
+train_level2 = select(train_level2,-y,y)
+folds_level2 <- createFolds(train_level2$y, k = 5)
+level2_control <- trainControl(
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = "final",
+  index = folds_level2,
+  verboseIter = F
+)
+
+model_stack <- caret::train(
+  y~personal_pred*macro_pred, train_level2,
+  metric = "ROC",
+  method = "glm",
+  trControl = level2_control
+)
+summary(model_stack)
+model_stack
+```
+```{r}
+# What the two level 1 predictino look like?
+for (i in (length(train_level2)-3):(length(train_level2)-1)) {
+    col = colnames(train_level2)[i];
+    if(!is.numeric(train_level2[,i])) next
+    p1 = ggplot(train_level2, aes(x=y, y=train_level2[,i])) + 
+      geom_boxplot(fill="slateblue", alpha=0.2) + 
+      xlab("Target?") + ylab(col)
+    p2 = ggplot(train_level2, aes(x=train_level2[,col],fill=y)) + geom_histogram() + xlab(col)
+    p3 = ggarrange(p1, p2, ncol = 2, nrow = 1, common.legend = TRUE)
+    print(p3)
+  }
+```
+
+
+```{r}
+# look at Training errors
+library(pROC)
+p_train = predict(model_glmnet, train, type = "prob")[,2]
+plot.roc(train$y,p_train,print.auc=T)
+train_error = train
+train_error$p = p_train
+pred = ifelse(p_train>0.2,"yes","no")
+train_error = train_error[as.character(train_error$y)!=pred,]
+summary(train_error)
+```
+
+```{r}
+save(model_rpart, file = "models/model_rpart.rda")
+save(model_nb, file = "models/model_nb.rda")
+save(model_rf, file = "models/model_rf.rda")
+save(model_glmnet, file = "models/model_glmnet.rda")
+save(model_glmnet_pca, file = "models/model_glmnet_pca.rda")
+save(model_glmnet_mannual_feature_selection, file = "models/model_glmnet_mannual_feature_selection.rda")
+save(model_stack, file = "models/model_stack.rda")
+
+```
+
+```{r}
+model_list = list(rf=model_rf,
+                  glmnet=model_glmnet,
+                  glmnet_pca=model_glmnet_pca,
+                  glmnet_manual_feature=model_glmnet_mannual_feature_selection,
+                  rpart=model_rpart,
+                  nb=model_nb,
+                  stack=model_stack
+                  )
+resamps <- resamples(model_list)
+summary(resamps, metric = "ROC")
+dotplot(resamps, metric = "ROC")
+```
+
+```{r}
+# Use cross validation to determine the threshold inorder to generate greatest ROI
+# The idea is inspired by: https://github.com/kurakura0916/bank_marketing
+# ROI = Number of Acquired Customer * 20 - 10 * Number of Calls
+best_model = model_glmnet_mannual_feature_selection
+library(rlist)
+roi_list = list()
+max_roi_vec = c()
+max_thres_vec = c()
+for (fold in folds) {
+  cvdata = train[fold,]
+  p = predict(best_model, cvdata, type = "prob")[,2]
+  roi = data.frame(thres=c(),roi=c())
+  for(thres in seq(0.15,1,0.01)) {
+    pred = ifelse(p>thres,"yes","no")
+    cost = 10 * sum(pred=="yes")
+    gain = 20 * sum(cvdata$y=="yes" & pred=="yes")
+    roi<-rbind(roi, data.frame(thres=thres, roi=gain-cost))
+  }
+  roi_list = list.append(roi_list,roi)
+  max_roi_vec = c(max_roi_vec,max(roi$roi))
+  max_thres_vec = c(max_thres_vec,roi$thres[which.max(roi$roi)])
+}
+max_roi_mean = mean(max_roi_vec)
+max_thres_mean = mean(max_thres_vec)
+ggplot(roi_list[[1]],aes(x=thres,y=roi)) + 
+  geom_line() + 
+  geom_line(data=roi_list[[2]],color="red") + 
+  geom_line(data=roi_list[[3]],color="green") +
+  geom_line(data=roi_list[[4]],color="purple") + 
+  geom_line(data=roi_list[[5]],color="yellow") + 
+  labs(title ="Decision Threshold vs ROI", x = "threshold(0~100%)", y = "ROI") + 
+  annotate("text", x = 0.9, y = max_roi_mean, 
+           label = c(paste("Max ROI mean:",max_roi_mean,"\nthreshold mean:",max_thres_mean)) , color="orange", size=5 , angle=0)
+```
+
+```{r}
+library(pROC)
+# Evaluate on the test set
+p = predict(best_model, test, type = "prob")[,2]
+plot.roc(test$y,p,print.auc=T)
+confusionMatrix(as.factor(ifelse(p>max_thres_mean,"yes","no")),test$y,mode="prec_recall")
+# ROI
+pred = ifelse(p>max_thres_mean,"yes","no")
+cost = 10 * sum(pred=="yes")
+gain = 20 * sum(test$y=="yes" & pred=="yes")
+print("ROI on test set:")
+print(gain - cost)
+# Enhancement as compared to blindly calling everyone?
+cost = 10 * dim(test)[1]
+gain = 20 * sum(test$y=="yes")
+print("ROI if bindly calling every one:")
+print(gain - cost)
+```
+
+```{r}
+library(ggthemes)
+imp    <- varImp(best_model)$importance
+varImportance <- data.frame(Variables = row.names(imp), 
+                            Importance = imp$Overall)
+# Create a rank variable based on importance
+rankImportance <- varImportance %>%
+  mutate(Rank = paste0('#',dense_rank(desc(Importance))))
+rankImportance = rankImportance[order(rankImportance$Importance,decreasing = T),]
+rankImportance = rankImportance[1:10,]
+# Use ggplot2 to visualize the relative importance of variables
+ggplot(rankImportance, aes(x = reorder(Variables, Importance), 
+                           y = Importance, fill = Importance)) +
+  geom_bar(stat='identity') + 
+  geom_text(aes(x = Variables, y = 0.5, label = Rank),
+            hjust=0, vjust=0.55, size = 4, colour = 'red') +
+  labs(x = 'Variables') +
+  coord_flip() + 
+  theme_few()
+```
+
+

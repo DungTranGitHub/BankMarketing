@@ -76,35 +76,56 @@ shinyServer(function(input, output,session) {
   data <- reactive({
     switch(input$datasetOption,
            "Original" = data_original,
-           "Preprocess" = data_preprocess)
+           "Preprocessed" = data_preprocess)
   })
   
   costChange = reactiveValues(maxThreshold = 0.05)
   
-  costVal <- reactive({})
   
   observe({
     updateSelectInput(session, "var", choices = names(data()))
+    xy = c(input$call_cost, input$gain_success)
+    if (!is.null(xy)){
+      roi_list = list()
+      max_roi_vec = c()
+      max_thres_vec = c()
+      for (fold in folds) {
+        cvdata = train[fold,]
+        p = predict(best_model, cvdata, type = "prob")[,2]
+        roi = data.frame(thres=c(),roi=c())
+        for(thres in seq(0.15,1,0.01)) {
+          pred = ifelse(p>thres,"yes","no")
+          cost = input$call_cost * sum(pred=="yes")
+          gain = input$gain_success * sum(cvdata$y=="yes" & pred=="yes")
+          roi<-rbind(roi, data.frame(thres=thres, roi=gain-cost))
+        }
+        roi_list = list.append(roi_list,roi)
+        max_roi_vec = c(max_roi_vec,max(roi$roi))
+        max_thres_vec = c(max_thres_vec,roi$thres[which.max(roi$roi)])
+      }
+      max_thres_mean = mean(max_thres_vec)
+      costChange$maxThreshold <- max_thres_mean
+    }
 
   })
 
   output$data_table <- DT::renderDataTable({
     data <- switch(input$datasetOption,
                    "Original" = data_original,
-                   "Preprocess" = data_preprocess)
+                   "Preprocessed" = data_preprocess)
   })
   
   output$summary <- renderPrint({
     data <- switch(input$datasetOption,
                    "Original" = data_original,
-                   "Preprocess" = data_preprocess)
+                   "Preprocessed" = data_preprocess)
     summary(data)
   })
   
   output$correlationGraph <- renderPlot({
     data <- switch(input$datasetOption,
                    "Original" = data_original,
-                   "Preprocess" = data_preprocess)
+                   "Preprocessed" = data_preprocess)
     data_num=data[,sapply(data, is.numeric)]
     data_num=cbind(data_num,y=as.integer(data$y))
     cor_result=rcorr(as.matrix(data_num))
@@ -122,7 +143,7 @@ shinyServer(function(input, output,session) {
   output$distPlot <- renderPlot({
     data <- switch(input$datasetOption,
                    "Original" = data_original,
-                   "Preprocess" = data_preprocess)
+                   "Preprocessed" = data_preprocess)
     col <- input$var
     if(is.numeric(data[,col])){
       p3 = ggplot(data, aes(x=y, y=data[,col])) + 
@@ -160,7 +181,8 @@ shinyServer(function(input, output,session) {
   
   output$var_description <- renderText({
     text <- switch(input$var, 
-                   "age" = "Customer's age (numeric)", 
+                   "age" = "Customer's age (numeric)",
+                   "age_group" = "Proccessed customer's age into categorical: teens, 20s, 30s, 40s, 50s and seniors",
                    "job" = "Type of job (categorical)",
                    "marital" = "Marital Status (categorical)", 
                    "education" = "Education (categorical)",
@@ -171,14 +193,21 @@ shinyServer(function(input, output,session) {
                    "month" = "Last contact month of year (categorical)",
                    "day_of_week" = "Last contact day of the week (categorical)" ,
                    "campaign" = "Number of contacts performed during this campaign and for this client (numeric, includes last contact)",
+                   "campaign_cat" = "Proccessed numeric attribute campaign to categorical: 1,2,3 and >3",
                    "pdays" = "Number of days that passed by after the client was last contacted from a previous campaign (numeric; 999 means client was not previously contacted)",
+                   "pdays_cat" = "Proccessed numeric attribute pdays to categorical: contacted before and not contacted before",
                    "previous" = "Number of contacts performed before this campaign and for this client (numeric)",
                    "poutcome" = "Outcome of the previous marketing campaign (categorical)",
                    "emp.var.rate" = "Employment variation rate - quarterly indicator (numeric)",
                    "cons.price.idx" = "Consumer price index - monthly indicator (numeric)",
                    "cons.conf.idx" = "Consumer confidence index - monthly indicator (numeric)",
                    "euribor3m" = "Euribor 3 month rate - daily indicator (numeric)",
-                   "nr.employed" = "Number of employees - quarterly indicator (numeric)")
+                   "nr.employed" = "Number of employees - quarterly indicator (numeric)",
+                   "emp.var.rate.cat" = "Proccessed numeric attribute emp.var.rate to categorical",
+                   "cons.price.idx.cat" = "Proccessed numeric attribute cons.price.idx to categorical",
+                   "cons.conf.idx.cat" = "Proccessed numeric attribute cons.conf.idx to categorical",
+                   "euribor3m.cat" = "Proccessed numeric attribute euribor3m to categorical",
+                   "nr.employed.cat" = "Proccessed numeric attribute nr.employed to categorical")
   })
   
   output$modelPlot <- renderPlot({

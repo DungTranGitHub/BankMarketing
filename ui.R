@@ -21,7 +21,7 @@ shinyUI(fluidPage(
                                 selectInput("datasetOption", 
                                             label = "Please choose dataset option:",
                                             choices = list("Original", 
-                                                           "Preprocess"
+                                                           "Preprocessed"
                                             ),
                                             selected = "Original"))
                        ),
@@ -67,7 +67,7 @@ shinyUI(fluidPage(
                        br(),
                        tabsetPanel(id="tabset",
                                    
-                                   tabPanel("Modals",
+                                   tabPanel("Models",
                                             br(),
                                             plotOutput("modelPlot"),
                                             selectInput("model", 
@@ -86,7 +86,7 @@ shinyUI(fluidPage(
                                             DT:: dataTableOutput("model_details")
                                    ),
                                    
-                                   tabPanel("ROI on Best Modal",
+                                   tabPanel("ROI on Best Model",
                                             br(),
                                             sidebarLayout(
                                               sidebarPanel(

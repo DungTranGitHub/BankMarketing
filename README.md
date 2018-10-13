@@ -7,3 +7,7 @@ To replicate the results, you may need to update the path to the data&model file
 Html output of report.Rmd
 3. server.R and ui.R
 R shiny App for this data analysis projects.
+4. Link to RShiny App:
+https://superstellar.shinyapps.io/BankMarketing-master/
+5. Source code can be downloaded at:
+https://github.com/DungTranGitHub/BankMarketing

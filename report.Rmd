@@ -635,7 +635,7 @@ ggplot(rankImportance, aes(x = reorder(Variables, Importance),
 
 ## Deployment
 
-An R Shiny dashboard was created and [uploaded to shinyapps](). It provides a more intuitive and visual look into the models that were built. A business analyst or marketing manager can take a look at the dashboard and draw their own conclusions about which factors are relevant and which are not. They can also explore the various models.
+An R Shiny dashboard was created and [uploaded to shinyapps](https://superstellar.shinyapps.io/BankMarketing-master/). It provides a more intuitive and visual look into the models that were built. A business analyst or marketing manager can take a look at the dashboard and draw their own conclusions about which factors are relevant and which are not. They can also explore the various models.
 
 Additionally, recall the ROI formula we have previously asssumed:
 **ROI = 20 * # of sales - 10 * # of calls**

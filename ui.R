@@ -77,7 +77,7 @@ shinyUI(fluidPage(
                                    
                                    tabPanel("Models",
                                             br(),
-                                            strong("Note: glm step AIC was excluded from the R SHiny app due to large file size."),
+                                            strong("Note: glm step AIC was excluded from the R Shiny app due to large file size."),
                                             br(),
                                             plotOutput("modelPlot"),
                                             selectInput("model", 

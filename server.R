@@ -294,7 +294,7 @@ shinyServer(function(input, output,session) {
 
     ROITable <- data.frame(
       Name = c("Cost Caused By Predict",
-               "Gain Earned By Predic",
+               "Gain Earned By Predict",
                "ROI Earned By Predict",
                "Cost Caused By Call All",
                "Gain Earned By Call All",

@@ -24,9 +24,21 @@ library(DMwR)
 library(ggthemes)
 
 ### data initial loading
-data_initial=read.csv("data/bank-additional-full.csv", header = TRUE, sep = ";")
+model_dir = "models"
+data_dir = "data"
+saved_models = list.files(model_dir)
+
+### load data
+data_initial=read.csv(paste(data_dir,"bank-additional-full.csv",sep="/"), header = TRUE, sep = ";")
 data_original =  select(data_initial,-duration)
 data_preprocess = data_original
+
+### load models
+for(file in saved_models) {
+  load(paste(model_dir,file,sep="/"))
+}
+
+best_model = model_glmnet_mannual_feature_selection
 
 
 ### preprocessing data
@@ -59,18 +71,6 @@ train = data_preprocess[split,]
 train_x = train[,names(train)!="y"]
 train_y = train$y
 folds <- createFolds(train_y, k = 5)
-
-### load models
-
-load(file = "models/model_rpart.rda")
-load(file = "models/model_nb.rda")
-load(file = "models/model_rf.rda")
-load(file = "models/model_glmnet.rda")
-load(file = "models/model_glmnet_pca.rda")
-load(file = "models/model_glmnet_mannual_feature_selection.rda")
-load(file = "models/model_stack.rda")
-best_model = model_glmnet_mannual_feature_selection
-
 
 shinyServer(function(input, output,session) {
   data <- reactive({

@@ -118,8 +118,16 @@ shinyUI(fluidPage(
                        )
 
                     
-           )
-  )
+           ),
+           tabPanel("Report",
+                    br(),
+                    p("For viewing html report, please click",
+                      a("here.", 
+                        href = "http://shiny.rstudio.com")),
+                    br(),
+                    includeMarkdown("report.Rmd")
+                    )
+    )
            
   )
 )

@@ -22,6 +22,7 @@ library(ggcorrplot)
 library(plyr)
 library(DMwR)
 library(ggthemes)
+library(glmnet)
 
 ### data initial loading
 model_dir = "models"

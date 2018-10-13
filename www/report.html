@@ -147,6 +147,7 @@ data=read.csv(paste(data_dir,&quot;bank-additional-full.csv&quot;,sep=&quot;/&qu
 <div id="i.-introduction" class="section level2">
 <h2>I. Introduction</h2>
 <p>The first assignment for the York Machine Learning course, <em>Machine Learning in Business Context</em> was to explore supervised machine learning algoritms. We chose a dataset from the UCI Machine Learning Repository, <a href="https://archive.ics.uci.edu/ml/datasets/Bank+Marketing">Bank Marketing Data Set</a>. This report follows the structures laid out in CRISP-DM methodology.</p>
+<p>The GitHub repository for all the source code is located at the following link: <a href="https://github.com/DungTranGitHub/BankMarketing">https://github.com/DungTranGitHub/BankMarketing</a>.</p>
 </div>
 <div id="ii.-business-understanding" class="section level2">
 <h2>II. Business Understanding</h2>
@@ -942,7 +943,7 @@ ggplot(rankImportance, aes(x = reorder(Variables, Importance),
 </div>
 <div id="deployment" class="section level2">
 <h2>Deployment</h2>
-<p>An R Shiny dashboard was created and <a href>uploaded to shinyapps</a>. It provides a more intuitive and visual look into the models that were built. A business analyst or marketing manager can take a look at the dashboard and draw their own conclusions about which factors are relevant and which are not. They can also explore the various models.</p>
+<p>An R Shiny dashboard was created and <a href="https://superstellar.shinyapps.io/BankMarketing-master/">uploaded to shinyapps</a>. It provides a more intuitive and visual look into the models that were built. A business analyst or marketing manager can take a look at the dashboard and draw their own conclusions about which factors are relevant and which are not. They can also explore the various models.</p>
 <p>Additionally, recall the ROI formula we have previously asssumed: <strong>ROI = 20 * # of sales - 10 * # of calls</strong></p>
 <p>We have assumed the profit from each sale is $20 and the cost for each call is $10. What if the profit/cost ratio changes? This becomes a cost-volumn-profit analysis, which would be of great interest to those running a similar marketing campaign. An interactive ROI page has been included in the R Shiny dashboard where users can enter their own cost and profit numbers to see the maximum ROI under the assumptions they have provided. Interestingly, if the cost is sufficiently low, the model suggests a very low probability threshold, indicating that the bank may as well just call everyone.</p>
 <p>Base on the merit and drawback of predictive modelling so far, if a bank would deploy such data product, it would need to:<br />

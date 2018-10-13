@@ -23,6 +23,7 @@ library(plyr)
 library(DMwR)
 library(ggthemes)
 library(glmnet)
+library(e1071)
 
 ### data initial loading
 model_dir = "models"

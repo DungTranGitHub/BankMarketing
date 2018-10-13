@@ -29,6 +29,8 @@ data=read.csv(paste(data_dir,"bank-additional-full.csv",sep="/"), header = TRUE,
 
 The first assignment for the York Machine Learning course, *Machine Learning in Business Context* was to explore supervised machine learning algoritms. We chose a dataset from the UCI Machine Learning Repository, [Bank Marketing Data Set](https://archive.ics.uci.edu/ml/datasets/Bank+Marketing). This report follows the structures laid out in CRISP-DM methodology.
 
+The GitHub repository for all the source code is located at the following link: [https://github.com/DungTranGitHub/BankMarketing](https://github.com/DungTranGitHub/BankMarketing).
+
 ## II. Business Understanding
 
 Banks often used direct marketing methods, such as telemarketing, in order to sell banking products to their customers. One such product is a term deposit. One piece of business domain knowledge that is useful to keep in mind is that a term deposit is a low-risk financial product.

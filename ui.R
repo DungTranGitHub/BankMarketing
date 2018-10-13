@@ -15,6 +15,14 @@ shinyUI(fluidPage(
   # Application title
   titlePanel("Bank Credit Marketing - Tall Machine Learning Group"),
   tabsetPanel(id ="dataTabSet",
+              tabPanel("Report",
+                       br(),
+                       strong("For viewing html report, please click",
+                              tags$a(href='report.html',' here', target='blank'), "."),
+                       br(),
+                       br(),
+                       includeMarkdown("report.Rmd")
+              ),
               tabPanel("Data Analysis and Preprocessing",
                        fluidRow(
                          column(12,
@@ -75,6 +83,7 @@ shinyUI(fluidPage(
                                                         choices = list("RPart", 
                                                                        "Naive Bayes",
                                                                        "Random Forest",
+                                                                       "GLM Step AIC",
                                                                        "GLM Net",
                                                                        "GLM PCA",
                                                                        "GLM Manual Feature Selection",
@@ -87,6 +96,9 @@ shinyUI(fluidPage(
                                    ),
                                    
                                    tabPanel("ROI on Best Model",
+                                            br(),
+                                            strong("The best model is Generalized Linear Model with Manual Feature Selection."),
+                                            br(),
                                             br(),
                                             sidebarLayout(
                                               sidebarPanel(
@@ -118,15 +130,8 @@ shinyUI(fluidPage(
                        )
 
                     
-           ),
-           tabPanel("Report",
-                    br(),
-                    p("For viewing html report, please click",
-                      a("here.", 
-                        href = "http://shiny.rstudio.com")),
-                    br(),
-                    includeMarkdown("report.Rmd")
-                    )
+           )
+           
     )
            
   )

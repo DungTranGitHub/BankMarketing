@@ -217,7 +217,8 @@ shinyServer(function(input, output,session) {
                       glmnet_manual_feature=model_glmnet_mannual_feature_selection,
                       rpart=model_rpart,
                       nb=model_nb,
-                      stack=model_stack
+                      stack=model_stack,
+                      glm_step_AIC = model_glm_stepAIC
     )
     resamps <- resamples(model_list)
     summary(resamps, metric = "ROC")
@@ -233,7 +234,8 @@ shinyServer(function(input, output,session) {
                     "GLM Net" = model_glmnet$results,
                     "GLM PCA" = model_glmnet_pca$results,
                     "GLM Manual Feature Selection" = model_glmnet_mannual_feature_selection$results,
-                    "Stack" = model_stack$results)
+                    "Stack" = model_stack$results,
+                    "GLM Step AIC" = model_glm_stepAIC$results )
   })
   
   

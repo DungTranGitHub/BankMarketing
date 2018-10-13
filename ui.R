@@ -83,7 +83,6 @@ shinyUI(fluidPage(
                                                         choices = list("RPart", 
                                                                        "Naive Bayes",
                                                                        "Random Forest",
-                                                                       "GLM Step AIC",
                                                                        "GLM Net",
                                                                        "GLM PCA",
                                                                        "GLM Manual Feature Selection",

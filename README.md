@@ -11,3 +11,4 @@ R shiny App for this data analysis projects.
 https://superstellar.shinyapps.io/BankMarketing-master/
 5. Source code can be downloaded at:
 https://github.com/DungTranGitHub/BankMarketing
+Updated on Oct,16, 2018
